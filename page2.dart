@@ -1,9 +1,6 @@
-import 'dart:ffi';
-import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:vongola/database/db_manage.dart';
 import 'package:intl/intl.dart';
 
@@ -51,15 +48,26 @@ class _Page2State extends State<Page2> {
     'Medical expenses': 'assets/medical.png',
     'Beauty expenses': 'assets/beauty.png',
     'Other': 'assets/other.png',
+    'IC' :'assets/money.png'
 
   };
+
+  String formatCurrency(double value) {
+    if (value >= 1e6) {
+      return '${(value / 1e6).toStringAsFixed(1)}M'; // Format for millions
+    } else if (value >= 1e3) {
+      return '${(value / 1e3).toStringAsFixed(1)}k'; // Format for thousands
+    }
+    return value.toString(); // Return as is for values less than a thousand
+  }
+
 
   @override
   void initState() {
     super.initState();
     selectedButton = 'Day'; // เริ่มต้นที่ Day
     selectedIcon = 'Pie'; // เริ่มต้นที่ Pie Chart
-    _showFinancialPieChart(context); // เรียกใช้ Pie Chart สำหรับ Day
+    _show_DonutChart(context); // เรียกใช้ Pie Chart สำหรับ Day
      // เรียก Status สำหรับ Day
   }
 
@@ -87,7 +95,6 @@ class _Page2State extends State<Page2> {
                   onDaySelected: (selectedDay, focusedDay) {
                     setState(() {
                       selectedDate = selectedDay;
-                      print("กรี๊ดดดดดดดดดด");
                       print(selectedDay);
                       DateTime dateOnly = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
                       print("Selected date: $dateOnly");
@@ -108,19 +115,19 @@ class _Page2State extends State<Page2> {
                       Image.asset('assets/pie-chart.png', width: 70, height: 70), // ใช้รูปภาพจาก assets
                       'Pie',
                       Colors.blue,
-                      _showFinancialPieChart,
+                      _show_DonutChart,
                     ),
                     _buildIconButton(
                       Image.asset('assets/notes.png', width: 70, height: 70), // ใช้รูปภาพจาก assets
                       'Status',
                       Colors.green,
-                      _showStatus_Expense,
+                      _show_Status_Expense,
                     ),
                     _buildIconButton(
                       Image.asset('assets/compare.png', width: 70, height: 70), // ใช้รูปภาพจาก assets
                       'Bar',
                       Colors.orange,
-                      _showFinancialBarChart,
+                      _show_BarChart,
                     ),
                   ],
                 ),
@@ -146,10 +153,10 @@ class _Page2State extends State<Page2> {
 
               SizedBox(height: 20),
               // ส่วนแสดงกราฟ Pie Chart
-              if (selectedIcon == 'Pie') _buildPieChart(),
+              if (selectedIcon == 'Pie') _build_DonutChart(),
               // ส่วนแสดงกราฟ Bar Chart
-              if (selectedIcon == 'Bar') _buildBarChart(),
-              if (selectedIcon == 'Status') _buildStatusList()
+              if (selectedIcon == 'Bar') _build_BarChart(),
+              if (selectedIcon == 'Status') _build_StatusList()
 
             ],
           ),
@@ -157,7 +164,6 @@ class _Page2State extends State<Page2> {
       ),
     );
   }
-
 
   // สร้างปุ่มเลือกช่วงเวลา (Day, Month, Year)
   TextButton _buildPeriodButton(String label) {
@@ -167,11 +173,11 @@ class _Page2State extends State<Page2> {
           selectedButton = label;
         });
         if (selectedIcon == 'Pie') {
-          _showFinancialPieChart(context); // เรียกฟังก์ชันดึงข้อมูล Pie Chart เมื่อเลือกช่วงเวลา
+          _show_DonutChart(context); // เรียกฟังก์ชันดึงข้อมูล Pie Chart เมื่อเลือกช่วงเวลา
         } else if (selectedIcon == 'Bar') {
-          _showFinancialBarChart(context); // เรียกฟังก์ชันดึงข้อมูล Bar Chart เมื่อเลือกช่วงเวลา
+          _show_BarChart(context); // เรียกฟังก์ชันดึงข้อมูล Bar Chart เมื่อเลือกช่วงเวลา
         }else if(selectedIcon=='Status'){
-          _showStatus_Expense(context);
+          _show_Status_Expense(context);
         }
       },
       child: Text(
@@ -230,7 +236,7 @@ class _Page2State extends State<Page2> {
     );
   }
 
-  Widget _buildPieChart() {
+  Widget _build_DonutChart() {
     // ข้อความ Chart และ Show Expenses อยู่ด้านบนก่อน if
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0), // กำหนดระยะห่างจากขอบซ้ายและขวา 20
@@ -296,49 +302,42 @@ class _Page2State extends State<Page2> {
     );
   }
 
-
-
-
-
-
-  Widget _buildBarChart() {
+  Widget _build_BarChart() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0), // กำหนดระยะห่างจากขอบซ้ายและขวา 20
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // จัดข้อความให้อยู่ด้านซ้าย
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ข้อความ Compare และ Show Expenses
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // จัดให้อยู่ชิดซ้าย
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Compare',
                 style: TextStyle(
-                  fontSize: 24, // ขนาดตัวอักษรใหญ่
-                  fontWeight: FontWeight.bold, // ทำให้ตัวหนา
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 'Show Expenses',
                 style: TextStyle(
-                  fontSize: 12, // ขนาดตัวอักษรเล็กกว่า
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 10), // เว้นระยะห่างระหว่างข้อความกับกราฟ
-          // เช็คเงื่อนไขว่าถ้าไม่มีข้อมูล
+          SizedBox(height: 10),
           if (totalIncome == 0.0 && totalExpense == 0.0)
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(height: 50), // เพิ่มระยะห่างจากข้างบน
+                  SizedBox(height: 50),
                   Image.asset(
-                    'assets/Zzz.png', // ใส่ path รูปภาพที่คุณต้องการ
-                    width: 100, // กำหนดขนาดความกว้างของรูป
-                    height: 100, // กำหนดขนาดความสูงของรูป
-                    fit: BoxFit.cover, // กำหนดการแสดงผลรูปภาพ
+                    'assets/Zzz.png',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
                   ),
                 ],
               ),
@@ -348,16 +347,16 @@ class _Page2State extends State<Page2> {
               children: [
                 Container(
                   height: 300,
-                  width: 200,
+                  width: 300,
                   child: BarChart(
                     BarChartData(
                       borderData: FlBorderData(
                         show: true,
                         border: Border(
-                          bottom: BorderSide(color: Colors.black, width: 1), // เส้นขอบด้านล่าง
-                          left: BorderSide(color: Colors.transparent, width: 0), // ไม่มีเส้นขอบด้านซ้าย
-                          right: BorderSide(color: Colors.transparent, width: 0), // ไม่มีเส้นขอบด้านขวา
-                          top: BorderSide(color: Colors.transparent, width: 0), // ไม่มีเส้นขอบด้านบน
+                          bottom: BorderSide(color: Colors.black, width: 1),
+                          left: BorderSide(color: Colors.transparent, width: 0),
+                          right: BorderSide(color: Colors.transparent, width: 0),
+                          top: BorderSide(color: Colors.transparent, width: 10),
                         ),
                       ),
                       barGroups: [
@@ -365,14 +364,14 @@ class _Page2State extends State<Page2> {
                           x: 1,
                           barRods: [
                             BarChartRodData(
-                              y: totalExpense,
-                              colors: [Colors.red],
+                              toY: totalExpense,
                               width: 30,
+                              color: Colors.red,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(10), // มุมด้านซ้ายบนมน
-                                topRight: Radius.circular(10), // มุมด้านขวาบนมน
-                                bottomLeft: Radius.circular(0), // มุมด้านซ้ายล่างตรง
-                                bottomRight: Radius.circular(0), // มุมด้านขวาล่างตรง
+                                topLeft: Radius.circular(10),
+                                topRight: Radius.circular(10),
+                                bottomLeft: Radius.circular(0),
+                                bottomRight: Radius.circular(0),
                               ),
                             ),
                           ],
@@ -381,32 +380,23 @@ class _Page2State extends State<Page2> {
                           x: 0,
                           barRods: [
                             BarChartRodData(
-                              y: totalIncome,
-                              colors: [Colors.green],
+                              toY: totalIncome,
                               width: 30,
+                              color: Colors.green,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(10), // มุมด้านซ้ายบนมน
-                                topRight: Radius.circular(10), // มุมด้านขวาบนมน
-                                bottomLeft: Radius.circular(0), // มุมด้านซ้ายล่างตรง
-                                bottomRight: Radius.circular(0), // มุมด้านขวาล่างตรง
+                                topLeft: Radius.circular(10),
+                                topRight: Radius.circular(10),
+                                bottomLeft: Radius.circular(0),
+                                bottomRight: Radius.circular(0),
                               ),
                             ),
                           ],
                         ),
                       ],
-                      titlesData: FlTitlesData(
-                        leftTitles: SideTitles(showTitles: false),
-                        bottomTitles: SideTitles(
-                          showTitles: true,
-                          getTitles: (double value) {
-                            return ''; // คุณสามารถแก้ไขหรือลบถ้าต้องการ
-                          },
-                        ),
-                      ),
                     ),
                   ),
                 ),
-                SizedBox(height: 0), // ช่องว่างระหว่างกราฟกับข้อความ
+                SizedBox(height: 0),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -414,7 +404,7 @@ class _Page2State extends State<Page2> {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '- ${totalExpense}฿',
+                            text: '- ${formatCurrency(totalExpense)}฿',
                             style: TextStyle(fontSize: 20, color: Colors.red),
                           ),
                         ],
@@ -424,7 +414,7 @@ class _Page2State extends State<Page2> {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '+ ${totalIncome}฿',
+                            text: '+ ${formatCurrency(totalIncome)}฿',
                             style: TextStyle(fontSize: 20, color: Colors.green),
                           ),
                         ],
@@ -440,74 +430,113 @@ class _Page2State extends State<Page2> {
   }
 
 
-  Widget _buildStatusList() {
-    return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0), // กำหนดระยะห่างจากขอบซ้ายและขวา 20
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // จัดข้อความให้อยู่ด้านซ้าย
-          children: [
-          // ข้อความ Compare และ Show Expenses
-          Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // จัดให้อยู่ชิดซ้าย
-          children: [
-            Text(
-              'Record',
-              style: TextStyle(
-                fontSize: 24, // ขนาดตัวอักษรใหญ่
-                fontWeight: FontWeight.bold, // ทำให้ตัวหนา
-              ),
-            ),
-            Text(
-              'Show income and expense records',
-              style: TextStyle(
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 50),
-        if (statusExpenses.isEmpty)
-         Center(
-          child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: 50),
-            Image.asset(
-              'assets/Zzz.png',
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          ],
-        ),
-      )
-    else
-      ListView.builder(
-      shrinkWrap: true,
-      itemCount: statusExpenses.length,
-      itemBuilder: (context, index) {
-        // ดึงชื่อประเภทเพื่อใช้ค้นหารูปภาพ
-        final type = statusExpenses[index]['type'];
-        final imagePath = typeImage[type] ?? 'assets/other.png'; // ใช้รูปภาพเริ่มต้นถ้าไม่พบประเภท
 
-        return ListTile(
-          leading: Image.asset(
-            imagePath,
-            width: 40, // ปรับขนาดตามที่ต้องการ
-            height: 40,
-            fit: BoxFit.cover,
+
+  Widget _build_StatusList() {
+    double totalIncome_Status = 0;
+    double totalExpense_Status = 0;
+
+    // คำนวณรายรับและรายจ่ายทั้งหมด
+    statusExpenses.forEach((transaction) {
+      if (transaction['isExpense']) {
+        totalExpense_Status += transaction['amount'];
+      } else {
+        totalIncome_Status += transaction['amount'];
+      }
+    });
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Record',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Show income and expense records',
+                style: TextStyle(
+                  fontSize: 16,
+                ),
+              ),
+            ],
           ),
-          title: Text(type),
-          trailing: Text('${statusExpenses[index]['amount'].toStringAsFixed(2)} THB'),
-        );
-      },
-    ),
-    ],
-    ),
+          SizedBox(height: 20),
+
+          // ส่วนแสดงยอดรวม Income และ Expenses
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Income', style: TextStyle(color: Colors.green)),
+              Text('${totalIncome_Status.toStringAsFixed(2)} THB', style: TextStyle(color: Colors.green)),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Expenses', style: TextStyle(color: Colors.red)),
+              Text('${totalExpense_Status.toStringAsFixed(2)} THB', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+          SizedBox(height: 50),
+
+          if (statusExpenses.isEmpty)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: 50),
+                  Image.asset(
+                    'assets/Zzz.png',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: statusExpenses.length,
+              itemBuilder: (context, index) {
+                final transaction = statusExpenses[index];
+                final type = transaction['type'];
+                final imagePath = typeImage[type] ?? 'assets/other.png';
+                final amount = transaction['amount'];
+                final isExpense = transaction['isExpense'];
+                final amountText = isExpense ? '-$amount THB' : '+$amount THB';
+                final amountColor = isExpense ? Colors.red : Colors.green;
+
+                return ListTile(
+                  leading: Image.asset(
+                    imagePath,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                  ),
+                  title: Text(type == 'IC' ? 'Income' : type), // เพิ่มเงื่อนไขที่นี่
+                  trailing: Text(
+                    amountText,
+                    style: TextStyle(color: amountColor),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 
-  // ฟังก์ชันสำหรับแสดง Dialog ข้อมูลวันที่ที่เลือก
+
+
   void _showDateDetailsDialog(DateTime date) async {
     String dateString = date.toIso8601String().split('T')[0];
 
@@ -604,7 +633,7 @@ class _Page2State extends State<Page2> {
 
 
 
-  // ฟังก์ชันดึงข้อมูลสถานะการใช้จ่ายตามวันที่
+
   Future<void> _fetchcalendarDay(String date) async {
     print("Fetching data for date: $date");
 
@@ -614,18 +643,16 @@ class _Page2State extends State<Page2> {
     print(startDate);
     print('date *********************');
     print(date);
-    DateTime endDate = DateTime(startDate.year, startDate.month, startDate.day + 1); // วันถัดไป
 
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
       '''
     SELECT *
-    
+
       FROM Transactions
       JOIN Type_transaction ON Transactions.ID_type_transaction = Type_transaction.ID_type_transaction
-      WHERE DATE(Transactions.date_user) = '${startDate.year}-${startDate.month.toString().padLeft(2,'0')}-${startDate.day.toString().padLeft(2,'0')}' 
-      
-      ''',
+      WHERE DATE(Transactions.date_user) = '${startDate.year}-${startDate.month.toString().padLeft(2,'0')}-${startDate.day.toString().padLeft(2,'0')}'
 
+      ''',
     );
     print("__________________");
     print('${startDate.year}-${startDate.month}-${startDate.day}' );
@@ -645,14 +672,11 @@ class _Page2State extends State<Page2> {
     });
   }
 
-
-
-
-  Future<void> _fetchPieChartDataDay() async {
+  Future<void> _fetch_DonutChart_Day() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
-    SELECT Transactions.ID_type_transaction, 
-           SUM(Transactions.amount_transaction) AS total_amount_Pie, 
+    SELECT Transactions.ID_type_transaction,
+           SUM(Transactions.amount_transaction) AS total_amount_Pie,
            Type_transaction.type_transaction
     FROM Transactions
     JOIN Type_transaction ON Transactions.ID_type_transaction = Type_transaction.ID_type_transaction
@@ -683,7 +707,7 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  Future<void> _fetchPieChartDataMonth() async {
+  Future<void> _fetch_DonutChart_Month() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
       SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_amount_Pie, Type_transaction.type_transaction
@@ -708,7 +732,7 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  Future<void> _fetchPieChartDataYear() async {
+  Future<void> _fetch_DonutChart_Year() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
       SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_amount_Pie, Type_transaction.type_transaction
@@ -733,15 +757,15 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  Future<void> _fetchStatusDay() async {
+  Future<void> _fetch_Status_Day() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
-    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_expense, Type_transaction.type_transaction
+    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_amount,
+           Transactions.type_expense, Type_transaction.type_transaction
     FROM Transactions
     JOIN Type_transaction ON Transactions.ID_type_transaction = Type_transaction.ID_type_transaction
-    WHERE Transactions.type_expense = 1
-    AND DATE(Transactions.date_user) = DATE("now","localtime")
-    GROUP BY Transactions.ID_type_transaction
+    WHERE DATE(Transactions.date_user) = DATE("now", "localtime")
+    GROUP BY Transactions.ID_type_transaction, Transactions.type_expense
     '''
     );
     print('Status for today: $result');
@@ -749,51 +773,48 @@ class _Page2State extends State<Page2> {
       statusExpenses = result.map((data) {
         return {
           'type': data['type_transaction'],
-          'amount': data['total_expense'],
-
+          'amount': data['total_amount'] ?? 0.0,  // ตั้งค่าเริ่มต้นเป็น 0.0 ถ้าเป็น null
+          'isExpense': data['type_expense'] == 1,
         };
       }).toList();
-
     });
   }
 
-  Future<void> _fetchStatusMonth() async {
+  Future<void> _fetch_Status_Month() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
-    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_expense, Type_transaction.type_transaction
+    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_amount,
+           Transactions.type_expense, Type_transaction.type_transaction
     FROM Transactions
     JOIN Type_transaction ON Transactions.ID_type_transaction = Type_transaction.ID_type_transaction
-    WHERE Transactions.type_expense = 1
-    AND strftime('%Y-%m', Transactions.date_user) = strftime('%Y-%m', 'now','localtime')  -- ดึงข้อมูลตามเดือนปัจจุบัน
-    GROUP BY Transactions.ID_type_transaction
+    WHERE strftime('%Y-%m', Transactions.date_user) = strftime('%Y-%m', 'now','localtime')  -- ดึงข้อมูลตามเดือนปัจจุบัน
+    GROUP BY Transactions.ID_type_transaction, Transactions.type_expense
     '''
     );
     // ตรวจสอบผลลัพธ์ที่ได้จากฐานข้อมูล
-    print('Status for today: $result');
+    print('Status for this month: $result');
 
     // กำหนดค่าแสดงผล หรือ อัพเดท state ที่ต้องการแสดงบน UI
     setState(() {
-      // สมมติว่าคุณมีตัวแปรที่จะแสดงผล เช่น `totalExpenses`
       statusExpenses = result.map((data) {
         return {
           'type': data['type_transaction'],
-          'amount': data['total_expense'],
-
+          'amount': data['total_amount'] ?? 0.0, // ตั้งค่าเริ่มต้นเป็น 0.0 ถ้าเป็น null
+          'isExpense': data['type_expense'] == 1, // ระบุว่าเป็นรายจ่ายหรือรายรับ
         };
       }).toList();
-
     });
   }
 
-  Future<void> _fetchStatusYear() async {
+  Future<void> _fetch_Status_Year() async {
     final List<Map<String, dynamic>> result = await DatabaseManagement.instance.rawQuery(
         '''
-    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_expense, Type_transaction.type_transaction
+    SELECT Transactions.ID_type_transaction, SUM(Transactions.amount_transaction) AS total_amount,
+           Transactions.type_expense, Type_transaction.type_transaction
     FROM Transactions
     JOIN Type_transaction ON Transactions.ID_type_transaction = Type_transaction.ID_type_transaction
-    WHERE Transactions.type_expense = 1
-    AND strftime('%Y', Transactions.date_user) = strftime('%Y', 'now','localtime')  -- ดึงข้อมูลตามปีปัจจุบัน
-    GROUP BY Transactions.ID_type_transaction
+    WHERE strftime('%Y', Transactions.date_user) = strftime('%Y', 'now','localtime')  -- ดึงข้อมูลตามปีปัจจุบัน
+    GROUP BY Transactions.ID_type_transaction, Transactions.type_expense
     '''
     );
     // ตรวจสอบผลลัพธ์ที่ได้จากฐานข้อมูล
@@ -804,14 +825,14 @@ class _Page2State extends State<Page2> {
       statusExpenses = result.map((data) {
         return {
           'type': data['type_transaction'],
-          'amount': data['total_expense'],
+          'amount': data['total_amount'] ?? 0.0, // ตั้งค่าเริ่มต้นเป็น 0.0 ถ้าเป็น null
+          'isExpense': data['type_expense'] == 1, // ระบุว่าเป็นรายจ่ายหรือรายรับ
         };
       }).toList();
     });
   }
 
-  // ฟังก์ชันดึงข้อมูล Bar Chart จากฐานข้อมูล
-  Future<void> _fetchBarDataDay() async {
+  Future<void> _fetch_BarChart_Day() async {
     final List<Map<String, dynamic>> incomeResult = await DatabaseManagement.instance.rawQuery(
       'SELECT SUM(amount_transaction) AS total_income FROM transactions WHERE type_expense = 0 AND DATE(date_user) = DATE("now","localtime")',
     );
@@ -830,7 +851,7 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  Future<void> _fetchBarDataMonth() async {
+  Future<void> _fetch_BarChart_Month() async {
     final List<Map<String, dynamic>> incomeResult = await DatabaseManagement.instance.rawQuery(
         'SELECT SUM(amount_transaction) AS total_income FROM transactions WHERE type_expense = 0 AND strftime("%m", date_user) = strftime("%m", "now") AND strftime("%Y", date_user) = strftime("%Y", "now","localtime")'
     );
@@ -849,7 +870,7 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  Future<void> _fetchBarDataYear() async {
+  Future<void> _fetch_BarChart_Year() async {
     final List<Map<String, dynamic>> incomeResult = await DatabaseManagement.instance.rawQuery(
         'SELECT SUM(amount_transaction) AS total_income '
             'FROM transactions '
@@ -874,40 +895,40 @@ class _Page2State extends State<Page2> {
     });
   }
 
-  // ฟังก์ชันแสดงกราฟ Pie Chart และดึงข้อมูล
-  void _showFinancialPieChart(BuildContext context) {
+
+  void _show_DonutChart(BuildContext context) {
     setState(() {
       if (selectedButton == 'Day') {
-        _fetchPieChartDataDay();
+        _fetch_DonutChart_Day();
       } else if (selectedButton == 'Month') {
-        _fetchPieChartDataMonth();
+        _fetch_DonutChart_Month();
       } else if (selectedButton == 'Year') {
-        _fetchPieChartDataYear();
+        _fetch_DonutChart_Year();
       }
     });
   }
 
   // ฟังก์ชันแสดง Status Expense
-  void _showStatus_Expense(BuildContext context) {
+  void _show_Status_Expense(BuildContext context) {
     setState(() {
     if (selectedButton == 'Day') {
-      _fetchStatusDay(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Day
+      _fetch_Status_Day(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Day
     } else if (selectedButton == 'Month') {
-      _fetchStatusMonth(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Month
+      _fetch_Status_Month(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Month
     } else if (selectedButton == 'Year') {
-      _fetchStatusYear(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Year
+      _fetch_Status_Year(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Year
     }
     });
   }
 
   // ฟังก์ชันแสดง Bar Chart และดึงข้อมูล
-  void _showFinancialBarChart(BuildContext context) {
+  void _show_BarChart(BuildContext context) {
     if (selectedButton == 'Day') {
-      _fetchBarDataDay(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Day
+      _fetch_BarChart_Day();
     } else if (selectedButton == 'Month') {
-      _fetchBarDataMonth(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Month
+      _fetch_BarChart_Month() ;
     } else if (selectedButton == 'Year') {
-      _fetchBarDataYear(); // ดึงข้อมูลจากฐานข้อมูลเมื่อเลือก Year
+      _fetch_BarChart_Year();
     }
   }
 
